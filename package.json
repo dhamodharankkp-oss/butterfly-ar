@@ -1,0 +1,26 @@
+{
+  "name": "butterfly-ar-explorer",
+  "version": "1.0.0",
+  "description": "Photorealistic Web AR Experience for the Common Banded Peacock Butterfly (Papilio crino) with 3D flight animation and dual-layer AR.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:8080",
+    "test": "node test.mjs"
+  },
+  "keywords": [
+    "web-ar",
+    "augmented-reality",
+    "webxr",
+    "model-viewer",
+    "threejs",
+    "butterfly",
+    "papilio-crino",
+    "trichy",
+    "mudumalai",
+    "gltf",
+    "pbr"
+  ],
+  "author": "Tecplore Developer",
+  "license": "MIT"
+}

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Butterfly AR Explorer | Common Banded Peacock (Papilio crino)</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦋</text></svg>">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Standalone Google model-viewer library (offline bundled) -->
+  <script type="module" src="assets/js/model-viewer.min.js"></script>
+  <!-- QR Code Generator library for phone scanning -->
+  <script src="assets/js/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-badge">🦋</div>
+        <div>
+          <h1>Butterfly AR Explorer</h1>
+          <p class="tagline">Photorealistic 3D Wildlife Experience • Tiruchirappalli (Trichy) Sanctuary Edition</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-guide" class="btn-secondary" title="AR User Guide">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span>AR Guide</span>
+        </button>
+        <button id="btn-desktop-qr" class="btn-secondary" title="Open on Mobile via QR Code">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Scan for Mobile</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- 3D Viewer Stage -->
+      <section class="viewer-section">
+        <div class="viewer-card">
+          <model-viewer
+            id="butterfly-viewer"
+            src="assets/models/butterfly.glb"
+            alt="Photorealistic 3D Common Banded Peacock Butterfly (Papilio crino)"
+            camera-controls
+            touch-action="pan-y"
+            auto-rotate
+            auto-rotate-delay="3000"
+            rotation-per-second="24deg"
+            environment-image="neutral"
+            tone-mapping="neutral"
+            exposure="1.05"
+            shadow-intensity="1.4"
+            shadow-softness="0.7"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            ar-placement="floor"
+            bounds="tight"
+            ar-scale="auto"
+            autoplay
+            camera-orbit="0deg 60deg 1.1m"
+            camera-target="0m 0.15m 0m"
+            min-camera-orbit="auto auto 0.2m"
+            max-camera-orbit="auto auto 3.5m">
+
+            <!-- Suppress default shadow-DOM AR button; custom buttons provided below -->
+            <span slot="ar-button" style="display: none;"></span>
+
+            <!-- Loading Progress -->
+            <div class="progress-bar hide" slot="progress-bar">
+              <div class="update-bar"></div>
+            </div>
+          </model-viewer>
+
+          <!-- AR Action Bar -->
+          <div class="ar-action-bar">
+            <button id="btn-camera-ar" class="btn-cam-launch" title="Instant AR camera on ALL mobile phones">
+              <span class="btn-icon">📷</span>
+              <div class="btn-text">
+                <strong>Live Camera AR</strong>
+                <small>Instant on any phone</small>
+              </div>
+            </button>
+            <button id="btn-launch-ar" class="btn-ar-launch" title="Floor-tracking AR via WebXR / Google Scene Viewer">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+              <div class="btn-text">
+                <strong>View in Your Room (AR)</strong>
+                <small>Floor & garden tracking</small>
+              </div>
+            </button>
+          </div>
+
+          <!-- Stage Quick Controls -->
+          <div class="viewer-controls">
+            <button id="btn-toggle-anim" class="btn-ctrl" title="Play or Pause Animation">
+              <span class="icon" id="anim-icon">⏸️</span>
+              <span id="anim-label">Pause</span>
+            </button>
+            <button id="btn-switch-action" class="btn-ctrl active-action" title="Switch between Garden Flight and Perched Close-Up">
+              <span class="icon">🎬</span>
+              <span id="action-label">Flight (A → B)</span>
+            </button>
+            <button id="btn-toggle-rotate" class="btn-ctrl" title="Toggle Turntable Rotation">
+              <span class="icon">🔄</span>
+              <span>Rotate</span>
+            </button>
+            <button id="btn-reset-view" class="btn-ctrl" title="Reset Camera View">
+              <span class="icon">🎯</span>
+              <span>Center</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Species Information Card -->
+        <article class="species-card">
+          <div class="species-header">
+            <div>
+              <span class="species-badge">Trichy Native Swallowtail</span>
+              <h2>Common Banded Peacock</h2>
+              <p class="scientific-name">Papilio crino • Fabricius, 1793</p>
+            </div>
+            <div class="scale-box">
+              <span class="scale-tag">AR Scale</span>
+              <strong>1:1 Life-Size</strong>
+              <small>~21 cm wingspan</small>
+            </div>
+          </div>
+
+          <p class="species-desc">
+            A magnificent swallowtail butterfly documented at the <strong>Srirangam Tropical Butterfly Conservatory</strong> in Tiruchirappalli (Trichy) and surrounding Western Ghats sanctuaries. Its velvet-black wings are dusted with shimmering emerald-blue and cyan iridescent scales that glow brilliantly when fluttering in sunlight.
+          </p>
+
+          <div class="spec-grid">
+            <div class="spec-item">
+              <span class="spec-icon">🌿</span>
+              <div>
+                <small>Native Habitat</small>
+                <strong>Trichy Gardens, Srirangam & Deciduous Forests</strong>
+              </div>
+            </div>
+            <div class="spec-item">
+              <span class="spec-icon">🌱</span>
+              <div>
+                <small>Larval Host Plant</small>
+                <strong>Satinwood (<em>Chloroxylon swietenia</em>)</strong>
+              </div>
+            </div>
+            <div class="spec-item">
+              <span class="spec-icon">📏</span>
+              <div>
+                <small>Wingspan</small>
+                <strong>80 – 100 mm (Life-size 21 cm AR)</strong>
+              </div>
+            </div>
+            <div class="spec-item">
+              <span class="spec-icon">🌸</span>
+              <div>
+                <small>Adult Diet</small>
+                <strong>Flower Nectar (Ixora, Lantana, Hibiscus)</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Sidebar: Flight Path & Interaction Guide -->
+      <aside class="sidebar-section">
+        <div class="card-side">
+          <div class="card-side-header">
+            <h3>Garden Flight Trajectory</h3>
+            <span class="status-pill">Active Simulation</span>
+          </div>
+          <p class="side-text">
+            Experience realistic biological locomotion as the butterfly flies across a natural 3D garden arc:
+          </p>
+
+          <div class="flight-steps">
+            <div class="flight-step">
+              <div class="step-dot start">A</div>
+              <div>
+                <strong>Point A (Left Perch)</strong>
+                <p>Resting / hovering at flower (-14 cm), flapping wings rhythmically.</p>
+              </div>
+            </div>
+            <div class="flight-step">
+              <div class="step-dot mid">✈</div>
+              <div>
+                <strong>Upward Arc Flight</strong>
+                <p>Takes off, ascends +14 cm into the air, swooping across with authentic wingbeat oscillations and banking rotations.</p>
+              </div>
+            </div>
+            <div class="flight-step">
+              <div class="step-dot end">B</div>
+              <div>
+                <strong>Point B (Right Perch)</strong>
+                <p>Sips nectar at right flower (+14 cm), then gracefully sweeps back in an 8-second seamless loop.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-switcher-box">
+            <button id="btn-action-flight" class="btn-mode active">
+              <span>🎬</span>
+              <span>Garden Flight (A → B)</span>
+            </button>
+            <button id="btn-action-perch" class="btn-mode">
+              <span>🦋</span>
+              <span>Perched Close-Up</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card-side tips-box">
+          <h4>💡 Two Ways to View in Your Room</h4>
+          <ul class="tips-list">
+            <li><strong>Option 1 (View in Room AR):</strong> Native AR with surface plane tracking. Move your phone slowly around your floor, bed, or garden lawn to anchor.</li>
+            <li><strong>Option 2 (Live Camera AR):</strong> Instant video overlay. Works immediately on 100% of smartphones and laptops with cameras — no plane scanning needed!</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Fullscreen Universal Live Camera AR Studio -->
+    <div id="camera-ar-overlay" class="camera-ar-overlay hidden">
+      <video id="camera-ar-video" class="camera-ar-video" autoplay playsinline muted></video>
+
+      <model-viewer
+        id="camera-ar-viewer"
+        class="camera-ar-viewer"
+        src="assets/models/butterfly.glb"
+        camera-controls
+        touch-action="none"
+        autoplay
+        bounds="tight"
+        environment-image="neutral"
+        tone-mapping="neutral"
+        exposure="1.05"
+        shadow-intensity="1.8"
+        shadow-softness="0.65"
+        camera-orbit="0deg 60deg 1.1m"
+        camera-target="0m 0.15m 0m"
+        min-camera-orbit="auto auto 0.2m"
+        max-camera-orbit="auto auto 4m">
+      </model-viewer>
+
+      <!-- Top Bar inside Camera AR -->
+      <div class="camera-ar-topbar">
+        <span class="ar-mode-badge">📷 Live Camera Room AR</span>
+        <button id="btn-exit-camera-ar" class="btn-exit-ar">✕ Exit AR</button>
+      </div>
+
+      <!-- Bottom Controls inside Camera AR -->
+      <div class="camera-ar-bottombar">
+        <p class="camera-ar-hint">1-finger rotate • 2-finger pinch to scale & drag onto your floor or table</p>
+        <div class="camera-ar-btns">
+          <button id="btn-flip-camera" class="btn-cam-action" title="Switch Front/Back Camera">🔄 Flip Camera</button>
+          <button id="btn-cam-anim" class="btn-cam-action" title="Toggle Flight vs Perched">🎬 Flight (A → B)</button>
+          <button id="btn-snap-photo" class="btn-cam-shutter" title="Take AR Photo">📸 Snap Photo</button>
+          <button id="btn-center-ar-model" class="btn-cam-action" title="Reset Position">🎯 Center</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="modal-qr" class="modal-backdrop hidden">
+      <div class="modal-dialog">
+        <button class="modal-close" id="btn-close-qr">&times;</button>
+        <h3>Scan to View on Your Phone</h3>
+        <p>Open your phone's camera and point it at this QR code to view the <strong>Common Banded Peacock Butterfly</strong> flying in your room in life-size Augmented Reality.</p>
+        <div class="qr-container">
+          <div id="qrcode"></div>
+        </div>
+        <p class="qr-url" id="qr-display-url"></p>
+        <div class="qr-tips">
+          <span>✓ Works on Android (Chrome ARCore / Live Camera)</span>
+          <span>✓ Works on iPhone & iPad (Safari Quick Look)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AR Instructions Modal -->
+    <div id="modal-guide" class="modal-backdrop hidden">
+      <div class="modal-dialog guide-dialog">
+        <button class="modal-close" id="btn-close-guide">&times;</button>
+        <h3>Web AR Quick Guide</h3>
+        <div class="guide-steps">
+          <div class="step-card">
+            <span class="step-number">1</span>
+            <h4>Open on Mobile</h4>
+            <p>Scan the QR code or open the HTTPS link in Chrome (Android) or Safari (iOS).</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">2</span>
+            <h4>Tap "View in Your Room (AR)"</h4>
+            <p>Launches WebXR floor tracking. Point camera at the floor or bed and move slowly in a gentle circle to detect the surface.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">3</span>
+            <h4>Or Use "Live Camera AR"</h4>
+            <p>If your surface has low contrast or doesn't track immediately, tap <strong>📷 Live Camera AR</strong> for instant projection!</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">4</span>
+            <h4>Snap & Save Photos</h4>
+            <p>Pinch with two fingers to resize, watch it fly between flowers, and capture photos standing in your room.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
