@@ -1,9 +1,12 @@
 # 🦋 Butterfly AR Explorer • Common Banded Peacock (*Papilio crino*)
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen?logo=github)](https://dhamodharankkp-oss.github.io/butterfly-ar/)
 [![WebXR](https://img.shields.io/badge/WebXR-Immersive%20AR-blue.svg)](https://immersiveweb.dev/)
 [![model-viewer](https://img.shields.io/badge/%3Cmodel--viewer%3E-v3.5.0-success.svg)](https://modelviewer.dev/)
 [![glTF 2.0](https://img.shields.io/badge/glTF-2.0%20PBR-orange.svg)](https://www.khronos.org/gltf/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> 🚀 **Live AR Experience:** [https://dhamodharankkp-oss.github.io/butterfly-ar/](https://dhamodharankkp-oss.github.io/butterfly-ar/)
 
 A lightweight, zero-dependency **Web Augmented Reality** application showcasing the **Common Banded Peacock** (*Papilio crino*), an iconic swallowtail butterfly documented at the **Srirangam Tropical Butterfly Conservatory** in Tiruchirappalli (Trichy) and the Western Ghats sanctuaries.
 
