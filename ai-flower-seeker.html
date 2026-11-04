@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AI Vision Flower-Seeker AR • Butterfly Prototype</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.4);
+      --flower-color: #ec4899;
+      --success: #10b981;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text);
+    }
+
+    #viewport-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Video stream layer */
+    #camera-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      transform: scaleX(1);
+    }
+
+    #camera-video.flipped {
+      transform: scaleX(-1);
+    }
+
+    /* 3D WebGL Canvas Layer */
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: auto;
+    }
+
+    /* 2D Detection & HUD Overlay */
+    #hud-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Top HUD Header */
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .glass-pill {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+      padding: 8px 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      pointer-events: auto;
+    }
+
+    .status-badge {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #eab308;
+      box-shadow: 0 0 10px #eab308;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .status-badge.active {
+      background: var(--success);
+      box-shadow: 0 0 12px var(--success);
+    }
+    .status-badge.homing {
+      background: var(--flower-color);
+      box-shadow: 0 0 12px var(--flower-color);
+    }
+
+    .hud-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .btn-icon {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    /* Diagnostics Banner */
+    .diagnostics-panel {
+      position: absolute;
+      top: 76px;
+      left: 16px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 11px;
+      line-height: 1.5;
+      font-family: monospace;
+      max-width: 280px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+      backdrop-filter: blur(12px);
+    }
+
+    .diagnostics-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 2px;
+    }
+    .diag-label { color: var(--text-muted); }
+    .diag-value { color: #fff; font-weight: 600; }
+
+    /* Bottom Control Deck */
+    .bottom-deck {
+      position: absolute;
+      bottom: 24px;
+      left: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .instruction-pill {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #cffafe;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      text-align: center;
+    }
+
+    .deck-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      pointer-events: auto;
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.8), rgba(14, 116, 144, 0.9));
+      color: white;
+      border: none;
+      border-radius: 9999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(6, 182, 212, 0.5);
+    }
+    .btn-action.flower-btn {
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      box-shadow: 0 6px 20px rgba(236, 72, 153, 0.35);
+    }
+    .btn-action.secondary {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Target Reticle in Camera Feed */
+    .reticle {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border: 2px dashed var(--flower-color);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 4;
+      display: none;
+      animation: pulse-reticle 1.5s infinite;
+    }
+
+    @keyframes pulse-reticle {
+      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+      50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; border-color: #f472b6; }
+      100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    }
+
+    /* Loading Overlay */
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+  </style>
+
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  
+  <!-- TensorFlow.js & COCO-SSD Vision Model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-status">Initializing AI Vision & 3D Engine...</div>
+  </div>
+
+  <div id="viewport-container">
+    <!-- Camera Stream -->
+    <video id="camera-video" autoplay playsinline muted></video>
+    <!-- 3D Three.js WebGL Layer -->
+    <canvas id="webgl-canvas"></canvas>
+    <!-- 2D AI Tracking HUD Layer -->
+    <canvas id="hud-canvas"></canvas>
+    <!-- Visual Reticle when target locked -->
+    <div id="target-reticle" class="reticle"></div>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="glass-pill">
+      <span id="ai-status-indicator" class="status-badge"></span>
+      <span class="hud-title">AI Butterfly Seeker</span>
+      <span style="opacity: 0.5">•</span>
+      <span id="state-text" style="color: var(--accent);">ROAMING</span>
+    </div>
+
+    <div class="top-actions">
+      <button id="btn-flip" class="btn-icon" title="Switch Camera">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0-4.418-3.582-8-8-8s-8 3.582-8 8c0 1.954.702 3.743 1.869 5.131L4 17h6v-6l-2.121 2.121A5.967 5.967 0 0 1 6 10c0-3.314 2.686-6 6-6s6 2.686 6 6c0 1.259-.391 2.428-1.057 3.393l1.455 1.455A7.952 7.952 0 0 0 20 10z"></path></svg>
+      </button>
+      <button id="btn-toggle-diag" class="btn-icon" title="Toggle Diagnostics">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Live Diagnostics -->
+  <div id="diagnostics-box" class="diagnostics-panel">
+    <div class="diagnostics-row"><span class="diag-label">Camera:</span><span id="diag-cam" class="diag-value">Starting...</span></div>
+    <div class="diagnostics-row"><span class="diag-label">Vision Model:</span><span id="diag-model" class="diag-value">Loading...</span></div>
+    <div class="diagnostics-row"><span class="diag-label">FPS:</span><span id="diag-fps" class="diag-value">--</span></div>
+    <div class="diagnostics-row"><span class="diag-label">Target Detected:</span><span id="diag-target" class="diag-value">None</span></div>
+    <div class="diagnostics-row"><span class="diag-label">Confidence:</span><span id="diag-conf" class="diag-value">--</span></div>
+    <div class="diagnostics-row"><span class="diag-label">Butterfly Mode:</span><span id="diag-mode" class="diag-value">ROAMING</span></div>
+    <div class="diagnostics-row"><span class="diag-label">Butterfly Scale:</span><span id="diag-scale" class="diag-value">1.6x</span></div>
+  </div>
+
+  <!-- Bottom Interactive Deck -->
+  <div class="bottom-deck">
+    <div class="instruction-pill" id="hud-instructions">
+      🌸 Point camera at a flower, plant, or tap the button below to test landing!
+    </div>
+    <div class="deck-buttons">
+      <button id="btn-spawn-target" class="btn-action flower-btn">
+        <span>🌸 Test Flower (Tap to Land)</span>
+      </button>
+      <button id="btn-takeoff" class="btn-action secondary">
+        <span>🦋 Take Off & Roam</span>
+      </button>
+      <div class="glass-pill" style="padding: 6px 14px; gap: 10px;">
+        <span style="color: var(--text-muted); font-size: 12px;">Scale:</span>
+        <button id="btn-scale-down" class="btn-icon" style="width: 28px; height: 28px; font-size: 14px;" title="Make Smaller">➖</button>
+        <span id="scale-label" style="font-size: 13px; font-weight: 700; color: #38bdf8; min-width: 36px; text-align: center;">2.0x</span>
+        <button id="btn-scale-up" class="btn-icon" style="width: 28px; height: 28px; font-size: 14px;" title="Make Bigger">➕</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * AI Vision-Driven Butterfly AR Engine
+     * Combines Three.js 3D rendering with in-browser TensorFlow.js / COCO-SSD object recognition
+     */
+
+    // --- Core State Variables ---
+    const STATE = {
+      ROAMING: 'ROAMING',
+      HOMING: 'HOMING',
+      PERCHED: 'PERCHED'
+    };
+    let currentState = STATE.ROAMING;
+
+    let scene, camera, renderer, clock;
+    let butterflyMesh = null;
+    let mixer = null;
+    let flightAction = null;
+    let perchAction = null;
+
+    let videoElement = document.getElementById('camera-video');
+    let webglCanvas = document.getElementById('webgl-canvas');
+    let hudCanvas = document.getElementById('hud-canvas');
+    let hudCtx = hudCanvas.getContext('2d');
+    let reticle = document.getElementById('target-reticle');
+
+    let currentFacingMode = 'environment';
+    let videoStream = null;
+    let visionModel = null;
+    let isDetecting = false;
+    let lastDetectionTime = 0;
+    const DETECTION_INTERVAL_MS = 200; // 5 FPS for AI vision inference
+
+    // 3D Spatial Target Coordinates & Scale
+    let currentScale = 1.6; // High visibility on desktop/laptop webcams
+    let targetWorldPos = new THREE.Vector3(0, 0, -0.75);
+    let targetScreenPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let homingStartTime = 0;
+    let homingStartPos = new THREE.Vector3();
+    let homingStartRot = new THREE.Quaternion();
+    let homingDuration = 2.2; // seconds for natural descent curve
+    let perchedDuration = 0;
+
+    // Roaming flight parameters
+    let roamAngle = 0;
+    let roamCenter = new THREE.Vector3(0, 0.05, -0.75);
+
+    // Diagnostics
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+    let currentFps = 60;
+
+    // --- DOM Elements ---
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingStatus = document.getElementById('loading-status');
+    const stateText = document.getElementById('state-text');
+    const statusIndicator = document.getElementById('ai-status-indicator');
+    const hudInstructions = document.getElementById('hud-instructions');
+    const diagCam = document.getElementById('diag-cam');
+    const diagModel = document.getElementById('diag-model');
+    const diagFps = document.getElementById('diag-fps');
+    const diagTarget = document.getElementById('diag-target');
+    const diagConf = document.getElementById('diag-conf');
+    const diagMode = document.getElementById('diag-mode');
+    const diagScale = document.getElementById('diag-scale');
+    const btnScaleDown = document.getElementById('btn-scale-down');
+    const btnScaleUp = document.getElementById('btn-scale-up');
+    const scaleLabel = document.getElementById('scale-label');
+    const btnFlip = document.getElementById('btn-flip');
+    const btnToggleDiag = document.getElementById('btn-toggle-diag');
+    const diagnosticsBox = document.getElementById('diagnostics-box');
+    const btnSpawnTarget = document.getElementById('btn-spawn-target');
+    const btnTakeoff = document.getElementById('btn-takeoff');
+
+    // --- Initialize Application ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      resizeCanvases();
+      window.addEventListener('resize', resizeCanvases);
+
+      setupThree();
+      await setupCamera();
+      await load3DButterfly();
+      await loadAIVisionModel();
+
+      setupUIHandlers();
+
+      // Fade out loading screen
+      loadingScreen.style.opacity = '0';
+      setTimeout(() => loadingScreen.style.display = 'none', 500);
+
+      // Start rendering & AI loop
+      clock = new THREE.Clock();
+      requestAnimationFrame(renderLoop);
+    });
+
+    function resizeCanvases() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      hudCanvas.width = w;
+      hudCanvas.height = h;
+
+      if (renderer) {
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    // --- 1. Three.js 3D Scene Setup ---
+    function setupThree() {
+      scene = new THREE.Scene();
+
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.01, 20);
+      camera.position.set(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: webglCanvas,
+        alpha: true,
+        antialias: true
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+
+      // Realistic environmental lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
+      directionalLight.position.set(2, 4, 3);
+      scene.add(directionalLight);
+
+      const softFill = new THREE.DirectionalLight(0xa5f3fc, 0.6);
+      softFill.position.set(-2, -1, 1);
+      scene.add(softFill);
+    }
+
+    // --- 2. Live Camera Setup ---
+    async function setupCamera() {
+      loadingStatus.textContent = 'Requesting Camera Access...';
+      try {
+        if (videoStream) {
+          videoStream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: { ideal: currentFacingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoElement.srcObject = videoStream;
+        await videoElement.play();
+
+        diagCam.textContent = currentFacingMode === 'user' ? 'Front (Selfie)' : 'Back (World)';
+        videoElement.classList.toggle('flipped', currentFacingMode === 'user');
+      } catch (err) {
+        console.warn('Camera access unavailable or denied:', err);
+        diagCam.textContent = 'Simulated Camera Mode';
+        // Provide graceful synthetic gradient canvas background if camera unavailable
+        videoElement.style.background = 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)';
+      }
+    }
+
+    // --- 3. Load 3D Butterfly Model & Animations ---
+    async function load3DButterfly() {
+      loadingStatus.textContent = 'Loading 3D Banded Peacock Model...';
+      const loader = new THREE.GLTFLoader();
+
+      return new Promise((resolve) => {
+        loader.load(
+          'assets/models/butterfly.glb',
+          (gltf) => {
+            butterflyMesh = gltf.scene;
+
+            // Optimized scale for clear, prominent visibility on laptop webcam & mobile
+            butterflyMesh.scale.set(currentScale, currentScale, currentScale);
+            butterflyMesh.position.copy(roamCenter);
+            scene.add(butterflyMesh);
+
+            // Initialize Animation Mixer & Clips
+            mixer = new THREE.AnimationMixer(butterflyMesh);
+            const animations = gltf.animations;
+
+            if (animations && animations.length > 0) {
+              const flightClip = animations.find(a => a.name.includes('Flight') || a.name.includes('A → B')) || animations[0];
+              const perchClip = animations.find(a => a.name.includes('Perched') || a.name.includes('Close-Up')) || animations[Math.min(1, animations.length - 1)];
+
+              flightAction = mixer.clipAction(flightClip);
+              perchAction = mixer.clipAction(perchClip);
+
+              flightAction.play();
+            }
+
+            resolve();
+          },
+          undefined,
+          (err) => {
+            console.error('Error loading butterfly model:', err);
+            // Fallback placeholder butterfly wings geometry if file missing
+            createFallbackButterfly();
+            resolve();
+          }
+        );
+      });
+    }
+
+    function createFallbackButterfly() {
+      const group = new THREE.Group();
+      const wingGeo = new THREE.PlaneGeometry(0.2, 0.2);
+      const wingMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide });
+      const leftWing = new THREE.Mesh(wingGeo, wingMat);
+      leftWing.position.x = -0.1;
+      const rightWing = new THREE.Mesh(wingGeo, wingMat);
+      rightWing.position.x = 0.1;
+      group.add(leftWing, rightWing);
+      group.position.copy(roamCenter);
+      scene.add(group);
+      butterflyMesh = group;
+    }
+
+    // --- 4. Load AI Vision Model (TensorFlow.js COCO-SSD) ---
+    async function loadAIVisionModel() {
+      loadingStatus.textContent = 'Warming up AI Vision Model...';
+      try {
+        if (typeof cocoSsd !== 'undefined') {
+          visionModel = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
+          diagModel.textContent = 'COCO-SSD Lite (Ready)';
+          statusIndicator.classList.add('active');
+        } else {
+          throw new Error('cocoSsd script not loaded');
+        }
+      } catch (err) {
+        console.warn('AI Vision load fallback:', err);
+        diagModel.textContent = 'Offline (Simulated AI)';
+        statusIndicator.classList.add('active');
+      }
+    }
+
+    // --- 5. Real-Time Detection Inference Loop ---
+    async function runAIVisionDetection() {
+      if (!visionModel || isDetecting || !videoElement.videoWidth) return;
+
+      const now = performance.now();
+      if (now - lastDetectionTime < DETECTION_INTERVAL_MS) return;
+      lastDetectionTime = now;
+      isDetecting = true;
+
+      try {
+        const predictions = await visionModel.detect(videoElement);
+        hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+
+        // Filter for botanical / plant / flower categories
+        // COCO-SSD categories: 'potted plant', 'vase', or common indoor/garden objects
+        const plantTarget = predictions.find(p => 
+          (p.class === 'potted plant' || p.class === 'vase' || p.class === 'bowl' || p.class === 'bottle') && p.score > 0.45
+        );
+
+        if (plantTarget) {
+          handleDetectedFlower(plantTarget);
+        } else {
+          diagTarget.textContent = 'Searching...';
+          diagConf.textContent = '--';
+          reticle.style.display = 'none';
+        }
+      } catch (e) {
+        // Skip frame on inference error
+      } finally {
+        isDetecting = false;
+      }
+    }
+
+    function handleDetectedFlower(target) {
+      const [x, y, width, height] = target.bbox;
+      const scaleX = hudCanvas.width / videoElement.videoWidth;
+      const scaleY = hudCanvas.height / videoElement.videoHeight;
+
+      // Centered on screen
+      const screenX = (x + width / 2) * scaleX;
+      const screenY = (y + height / 2) * scaleY;
+
+      // Draw bounding box on HUD
+      hudCtx.strokeStyle = '#ec4899';
+      hudCtx.lineWidth = 3;
+      hudCtx.strokeRect(x * scaleX, y * scaleY, width * scaleX, height * scaleY);
+
+      hudCtx.fillStyle = 'rgba(236, 72, 153, 0.85)';
+      hudCtx.fillRect(x * scaleX, (y * scaleY) - 24, 120, 22);
+      hudCtx.fillStyle = '#fff';
+      hudCtx.font = 'bold 12px Plus Jakarta Sans';
+      hudCtx.fillText(`🌸 ${target.class} ${Math.round(target.score * 100)}%`, (x * scaleX) + 6, (y * scaleY) - 8);
+
+      diagTarget.textContent = target.class;
+      diagConf.textContent = `${Math.round(target.score * 100)}%`;
+
+      // Trigger homing flight if butterfly is roaming
+      if (currentState === STATE.ROAMING) {
+        triggerHomingToScreenPoint(screenX, screenY);
+      }
+    }
+
+    // --- 6. 2D Screen Space to 3D Physical Space Mapping ---
+    function triggerHomingToScreenPoint(screenX, screenY) {
+      targetScreenPos = { x: screenX, y: screenY };
+
+      // Project 2D screen coordinate into 3D ray in camera space
+      const normalizedX = (screenX / window.innerWidth) * 2 - 1;
+      const normalizedY = -(screenY / window.innerHeight) * 2 + 1;
+
+      // Calculate 3D target coordinates at 0.75 meters distance
+      const vector = new THREE.Vector3(normalizedX, normalizedY, 0.5);
+      vector.unproject(camera);
+      const dir = vector.sub(camera.position).normalize();
+      const distance = 0.75; // comfortable perching distance on camera
+      targetWorldPos.copy(camera.position).add(dir.multiplyScalar(distance));
+
+      // Show Reticle
+      reticle.style.left = `${screenX}px`;
+      reticle.style.top = `${screenY}px`;
+      reticle.style.display = 'block';
+
+      // Transition State Machine
+      setState(STATE.HOMING);
+    }
+
+    function setState(newState) {
+      currentState = newState;
+      diagMode.textContent = newState;
+      stateText.textContent = newState;
+
+      statusIndicator.className = 'status-badge';
+
+      if (newState === STATE.ROAMING) {
+        statusIndicator.classList.add('active');
+        stateText.style.color = 'var(--accent)';
+        hudInstructions.textContent = '🌸 Butterfly is roaming! Point camera at a plant/flower or tap Test Flower.';
+        reticle.style.display = 'none';
+
+        if (flightAction && perchAction) {
+          flightAction.reset().fadeIn(0.4).play();
+          perchAction.fadeOut(0.4);
+        }
+      } else if (newState === STATE.HOMING) {
+        statusIndicator.classList.add('homing');
+        stateText.style.color = 'var(--flower-color)';
+        hudInstructions.textContent = '🎯 Target Acquired! Butterfly flying to the flower...';
+
+        homingStartTime = performance.now();
+        if (butterflyMesh) {
+          homingStartPos.copy(butterflyMesh.position);
+          homingStartRot.copy(butterflyMesh.quaternion);
+        }
+      } else if (newState === STATE.PERCHED) {
+        statusIndicator.classList.add('active');
+        stateText.style.color = 'var(--success)';
+        hudInstructions.textContent = '🦋 Perched on flower! Tap "Take Off & Roam" to release.';
+        perchedDuration = 0;
+
+        if (flightAction && perchAction) {
+          perchAction.reset().fadeIn(0.3).play();
+          flightAction.fadeOut(0.3);
+        }
+      }
+    }
+
+    // --- 7. Animation & Locomotion Render Loop ---
+    function renderLoop(timestamp) {
+      requestAnimationFrame(renderLoop);
+
+      const delta = clock.getDelta();
+      if (mixer) mixer.update(delta);
+
+      // Measure FPS
+      frameCount++;
+      if (timestamp - lastFpsTime >= 1000) {
+        currentFps = Math.round((frameCount * 1000) / (timestamp - lastFpsTime));
+        diagFps.textContent = currentFps;
+        frameCount = 0;
+        lastFpsTime = timestamp;
+      }
+
+      // Execute AI Vision step asynchronously
+      runAIVisionDetection();
+
+      // State-Based Butterfly Physics & Navigation
+      if (butterflyMesh) {
+        if (currentState === STATE.ROAMING) {
+          updateRoamingPhysics(delta);
+        } else if (currentState === STATE.HOMING) {
+          updateHomingTrajectory(timestamp);
+        } else if (currentState === STATE.PERCHED) {
+          updatePerchedBehavior(delta);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // --- State 1: Roaming Flight Physics ---
+    function updateRoamingPhysics(delta) {
+      roamAngle += delta * 1.2;
+      const radiusX = 0.45;
+      const radiusY = 0.18;
+
+      // 3D Figure-8 Lissajous organic roaming flight
+      const targetX = roamCenter.x + Math.sin(roamAngle) * radiusX;
+      const targetY = roamCenter.y + Math.sin(roamAngle * 2) * radiusY;
+      const targetZ = roamCenter.z + Math.cos(roamAngle) * 0.2;
+
+      // Smooth interpolation
+      butterflyMesh.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.1);
+
+      // Natural flight banking
+      const lookTarget = new THREE.Vector3(
+        roamCenter.x + Math.sin(roamAngle + 0.15) * radiusX,
+        roamCenter.y + Math.sin((roamAngle + 0.15) * 2) * radiusY,
+        roamCenter.z + Math.cos(roamAngle + 0.15) * 0.2
+      );
+      butterflyMesh.lookAt(lookTarget);
+
+      // Banking roll angle
+      const rollAngle = -Math.cos(roamAngle) * 0.35;
+      butterflyMesh.rotateZ(rollAngle);
+    }
+
+    // --- State 2: 3D Quadratic Bezier Homing Flight ---
+    function updateHomingTrajectory(timestamp) {
+      const elapsed = (timestamp - homingStartTime) / 1000;
+      const t = Math.min(elapsed / homingDuration, 1.0);
+
+      // Smoothstep ease in-out
+      const easeT = t * t * (3 - 2 * t);
+
+      // Quadratic Bezier Curve with an elevated apex control point
+      // P0 = homingStartPos, P2 = targetWorldPos, P1 = control point (arcs upward)
+      const apexControlPoint = new THREE.Vector3()
+        .addVectors(homingStartPos, targetWorldPos)
+        .multiplyScalar(0.5);
+      apexControlPoint.y += 0.25; // Gentle upward arc before descending to flower
+
+      const p0 = homingStartPos;
+      const p1 = apexControlPoint;
+      const p2 = targetWorldPos;
+
+      const currentPos = new THREE.Vector3(
+        (1 - easeT) * (1 - easeT) * p0.x + 2 * (1 - easeT) * easeT * p1.x + easeT * easeT * p2.x,
+        (1 - easeT) * (1 - easeT) * p0.y + 2 * (1 - easeT) * easeT * p1.y + easeT * easeT * p2.y,
+        (1 - easeT) * (1 - easeT) * p0.z + 2 * (1 - easeT) * easeT * p1.z + easeT * easeT * p2.z
+      );
+
+      butterflyMesh.position.copy(currentPos);
+
+      // Orient forward along tangent of trajectory
+      if (t < 0.98) {
+        const nextT = Math.min(easeT + 0.05, 1.0);
+        const nextPos = new THREE.Vector3(
+          (1 - nextT) * (1 - nextT) * p0.x + 2 * (1 - nextT) * nextT * p1.x + nextT * nextT * p2.x,
+          (1 - nextT) * (1 - nextT) * p0.y + 2 * (1 - nextT) * nextT * p1.y + nextT * nextT * p2.y,
+          (1 - nextT) * (1 - nextT) * p0.z + 2 * (1 - nextT) * nextT * p1.z + nextT * nextT * p2.z
+        );
+        butterflyMesh.lookAt(nextPos);
+      } else {
+        // Touchdown: settle upright onto the flower
+        butterflyMesh.rotation.set(0, 0, 0);
+      }
+
+      // Touchdown transition
+      if (t >= 1.0) {
+        setState(STATE.PERCHED);
+      }
+    }
+
+    // --- State 3: Perched Behavior ---
+    function updatePerchedBehavior(delta) {
+      perchedDuration += delta;
+      // Gentle micro-swaying with the flower
+      butterflyMesh.position.y = targetWorldPos.y + Math.sin(perchedDuration * 2.5) * 0.003;
+
+      // Auto-takeoff after 12 seconds of perching
+      if (perchedDuration > 12) {
+        setState(STATE.ROAMING);
+      }
+    }
+
+    // --- 8. UI Handlers & Test Triggers ---
+    function setupUIHandlers() {
+      // Tap screen to set flower target anywhere
+      webglCanvas.addEventListener('click', (e) => {
+        triggerHomingToScreenPoint(e.clientX, e.clientY);
+      });
+
+      // Spawn Virtual Target Button
+      btnSpawnTarget.addEventListener('click', () => {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight * 0.6;
+        triggerHomingToScreenPoint(cx, cy);
+      });
+
+      // Manual Takeoff Button
+      btnTakeoff.addEventListener('click', () => {
+        setState(STATE.ROAMING);
+      });
+
+      // Flip camera
+      btnFlip.addEventListener('click', async () => {
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        await setupCamera();
+      });
+
+      // Toggle diagnostics panel
+      btnToggleDiag.addEventListener('click', () => {
+        diagnosticsBox.style.display = diagnosticsBox.style.display === 'none' ? 'block' : 'none';
+      });
+
+      // Scale Up / Down Controls
+      function updateScale(val) {
+        currentScale = Math.max(0.4, Math.min(6.0, Math.round(val * 10) / 10));
+        if (butterflyMesh) {
+          butterflyMesh.scale.set(currentScale, currentScale, currentScale);
+        }
+        if (scaleLabel) scaleLabel.textContent = `${currentScale.toFixed(1)}x`;
+        if (diagScale) diagScale.textContent = `${currentScale.toFixed(1)}x`;
+      }
+
+      if (btnScaleUp) {
+        btnScaleUp.addEventListener('click', (e) => {
+          e.stopPropagation();
+          updateScale(currentScale + 0.3);
+        });
+      }
+      if (btnScaleDown) {
+        btnScaleDown.addEventListener('click', (e) => {
+          e.stopPropagation();
+          updateScale(currentScale - 0.3);
+        });
+      }
+
+      // Mouse wheel / trackpad zoom for size adjustment
+      window.addEventListener('wheel', (e) => {
+        if (e.target && e.target.closest && e.target.closest('.diagnostics-panel')) return;
+        if (e.deltaY < 0) updateScale(currentScale + 0.15);
+        else updateScale(currentScale - 0.15);
+      }, { passive: true });
+    }
+  </script>
+</body>
+</html>

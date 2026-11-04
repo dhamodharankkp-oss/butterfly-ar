@@ -26,6 +26,9 @@ Experience lifelike biological locomotion as the butterfly takes off from a flow
 - **2-Layer Universal AR Architecture:**
   1. **Layer 1 (Native Floor Tracking AR):** WebXR on Android Chrome, Google Scene Viewer, and Apple Quick Look on iOS Safari.
   2. **Layer 2 (Universal Live Camera AR):** Instant webcam/camera overlay mode that runs on **any smartphone or laptop** without requiring ARCore surface scanning.
+- **🌸 AI Vision Flower-Seeker Prototype (`ai-flower-seeker.html`):**
+  - Integrated in-browser TensorFlow.js (COCO-SSD) vision model.
+  - Automatically identifies real flowers/plants in camera view, calculates 3D raycast target coordinates, and autonomously flies the butterfly along a 3D Bezier curve to land and switch to the perched wingbeat animation.
 - **Completely Offline-Ready & Zero Dependencies:**
   - Bundled `<model-viewer>` and `qrcode.js` inside `assets/js/` — no external CDNs required.
   - Zero heavy software footprint (no Blender required).

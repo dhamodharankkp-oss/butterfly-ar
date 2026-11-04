@@ -21,7 +21,7 @@ function assert(cond, msg) {
 }
 
 // 1. Core Files
-const files = ['index.html', 'styles.css', 'app.js', 'server.js', 'package.json', 'README.md', 'test.mjs'];
+const files = ['index.html', 'styles.css', 'app.js', 'server.js', 'package.json', 'README.md', 'test.mjs', 'ai-flower-seeker.html'];
 files.forEach(f => {
   assert(fs.existsSync(path.join(__dirname, f)), `${f} exists`);
 });
